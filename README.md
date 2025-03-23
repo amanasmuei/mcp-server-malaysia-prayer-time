@@ -4,7 +4,7 @@ A Model Context Protocol (MCP) server that provides access to Malaysia Prayer Ti
 
 This server integrates with Claude for Desktop to provide real-time prayer times for locations throughout Malaysia.
 
-![Malaysia Prayer Time](https://github.com/mptwaktusolat/api-waktusolat/raw/main/public/images/og.png)
+![Malaysia Prayer Time MCP Server](public/images/banner.svg)
 
 ## Features
 

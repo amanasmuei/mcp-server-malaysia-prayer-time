@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Malaysia Prayer Time MCP Server Banner</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: white;
+    }
+    .banner {
+      width: 800px;
+      height: 400px;
+      background: linear-gradient(135deg, #1e3a8a, #0f172a);
+      border-radius: 15px;
+      color: white;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .title {
+      font-size: 36px;
+      font-weight: bold;
+      margin: 0;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 24px;
+      color: #fcd34d;
+      margin: 10px 0 20px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .description {
+      font-size: 18px;
+      color: #e5e7eb;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .prayer-times {
+      background-color: rgba(31, 41, 55, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 15px;
+      width: 80%;
+      max-width: 600px;
+    }
+    .prayer-time {
+      text-align: center;
+    }
+    .prayer-name {
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+    .prayer-hour {
+      font-size: 16px;
+      color: #fcd34d;
+    }
+    .footer {
+      position: absolute;
+      bottom: 20px;
+      right: 30px;
+      text-align: center;
+    }
+    .powered-by {
+      font-size: 12px;
+      color: #e5e7eb;
+    }
+    .mcp {
+      font-size: 14px;
+      font-weight: bold;
+      color: #fcd34d;
+    }
+    .mosque {
+      position: absolute;
+      right: 30px;
+      top: 120px;
+      opacity: 0.7;
+    }
+    .moon {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #fcd34d;
+      opacity: 0.9;
+      right: 90px;
+      top: 90px;
+      box-shadow: 0 0 20px rgba(252, 211, 77, 0.5);
+    }
+    .star {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background-color: white;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <h1 class="title">Malaysia Prayer Time</h1>
+    <h2 class="subtitle">MCP Server</h2>
+    <p class="description">Accurate Prayer Times for Malaysia</p>
+    
+    <div class="prayer-times">
+      <div class="prayer-time">
+        <div class="prayer-name">Fajr</div>
+        <div class="prayer-hour">05:48 AM</div>
+      </div>
+      <div class="prayer-time">
+        <div class="prayer-name">Syuruk</div>
+        <div class="prayer-hour">07:05 AM</div>
+      </div>
+      <div class="prayer-time">
+        <div class="prayer-name">Dhuhr</div>
+        <div class="prayer-hour">01:15 PM</div>
+      </div>
+      <div class="prayer-time">
+        <div class="prayer-name">Asr</div>
+        <div class="prayer-hour">04:35 PM</div>
+      </div>
+      <div class="prayer-time">
+        <div class="prayer-name">Maghrib</div>
+        <div class="prayer-hour">07:24 PM</div>
+      </div>
+      <div class="prayer-time">
+        <div class="prayer-name">Isha</div>
+        <div class="prayer-hour">08:39 PM</div>
+      </div>
+    </div>
+    
+    <div class="mosque">
+      <!-- Simple mosque silhouette -->
+      <svg width="150" height="120" viewBox="0 0 150 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20,100 L40,100 L40,70 L60,70 L60,100 L80,100 L80,50 C80,50 100,20 120,50 L120,100 L140,100 L140,30 C140,30 70,0 20,30 L20,100 Z" fill="#4b5563"/>
+      </svg>
+    </div>
+    
+    <div class="moon"></div>
+    
+    <!-- Stars -->
+    <div class="star" style="right: 130px; top: 60px;"></div>
+    <div class="star" style="right: 110px; top: 50px;"></div>
+    <div class="star" style="right: 70px; top: 70px;"></div>
+    <div class="star" style="right: 50px; top: 55px;"></div>
+    
+    <div class="footer">
+      <div class="powered-by">Powered by</div>
+      <div class="mcp">Model Context Protocol</div>
+    </div>
+  </div>
+  
+  <script>
+    // Instructions for taking a screenshot:
+    // 1. Open this HTML file in a browser
+    // 2. Take a screenshot of the banner div
+    // 3. Save it as banner.png in the public/images directory
+  </script>
+</body>
+</html> 
