@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+
+"""
+Entry point script for the Malaysia Prayer Time MCP Server
+"""
+
+from waktu_solat.server import main
+
+if __name__ == "__main__":
+    main()
