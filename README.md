@@ -37,7 +37,7 @@ yarn global add malaysia-prayer-time-mcp-server
 Clone this repository:
 
 ```bash
-git clone https://github.com/yourusername/mcp-server-waktu-solat.git
+git clone https://github.com/amanasmuei/mcp-server-waktu-solat.git
 cd mcp-server-waktu-solat
 ```
 
