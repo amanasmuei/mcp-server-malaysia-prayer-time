@@ -12,6 +12,26 @@ An MCP (Model Context Protocol) server that provides access to Malaysia Prayer T
 - List all available prayer time zones
 - Get current prayer time status for a zone
 
+## Prerequisites
+
+1. Install Python 3.8 or higher
+2. Install UVX CLI tool:
+   ```bash
+   pip install uvx-cli
+   ```
+3. Verify UVX installation:
+   ```bash
+   uvx --version
+   ```
+   If you get a "command not found" error, make sure your Python scripts directory is in your PATH:
+   ```bash
+   # For macOS/Linux, add to ~/.zshrc or ~/.bashrc:
+   export PATH="$PATH:$(python3 -m site --user-base)/bin"
+   
+   # Then reload your shell:
+   source ~/.zshrc  # or source ~/.bashrc
+   ```
+
 ## Installation
 
 ### Option 1: Install as UVX Plugin (Recommended for Claude Desktop)
@@ -44,6 +64,17 @@ pip install git+https://github.com/amanasmuei/mcp-server-malaysia-prayer-time.gi
 3. Restart Claude Desktop to load the plugin.
 
 Note: While the plugin is automatically registered with UVX after installation, Claude Desktop currently requires manual configuration to use UVX plugins.
+
+If you don't see the process running:
+1. Check Claude Desktop logs for any errors
+2. Verify that the configuration in `~/Library/Application Support/Claude/claude_desktop_config.json` is correct and properly formatted
+3. Try restarting Claude Desktop
+4. Ensure the plugin is properly installed by running the verification commands above
+5. If you see "spawn uvx ENOENT" error:
+   - Make sure UVX is installed: `pip install uvx-cli`
+   - Verify UVX is in your PATH: `which uvx`
+   - If not found, add Python scripts to PATH as described in Prerequisites
+   - Restart your terminal and Claude Desktop
 
 ### Option 2: Install as MCP Server
 
