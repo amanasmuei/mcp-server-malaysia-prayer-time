@@ -21,7 +21,29 @@ An MCP (Model Context Protocol) server that provides access to Malaysia Prayer T
 pip install git+https://github.com/amanasmuei/mcp-server-malaysia-prayer-time.git
 ```
 
-2. The plugin will be automatically registered with Claude Desktop if it supports UVX plugins.
+2. Configure Claude Desktop to use the plugin:
+   - Create or edit the Claude Desktop configuration file:
+   ```bash
+   mkdir -p ~/Library/Application\ Support/Claude
+   touch ~/Library/Application\ Support/Claude/claude_desktop_config.json
+   ```
+   
+   - Add the following configuration to `claude_desktop_config.json`:
+   ```json
+   {
+     "mcpServers": {
+       "waktu-solat": {
+         "command": "uvx",
+         "args": ["run", "malaysia-prayer-time"],
+         "env": {}
+       }
+     }
+   }
+   ```
+
+3. Restart Claude Desktop to load the plugin.
+
+Note: While the plugin is automatically registered with UVX after installation, Claude Desktop currently requires manual configuration to use UVX plugins.
 
 ### Option 2: Install as MCP Server
 
@@ -39,15 +61,26 @@ chmod +x bin/mcp-server-waktu-solat
 
 ### Verifying Installation
 
-To check if the server is running properly:
+To check if the plugin is properly installed:
 
-1. For UVX Plugin:
+1. Check if the plugin is installed in your Python environment:
    ```bash
+   pip list | grep malaysia-prayer-time
+   ```
+
+2. Check if the UVX plugin is registered:
+   ```bash
+   uvx list-plugins
+   ```
+
+3. Check if the server process is running:
+   ```bash
+   # For UVX Plugin
    ps aux | grep waktu_solat.mcp_server
    ```
    You should see a process running with `python -m waktu_solat.mcp_server`
 
-2. For MCP Server:
+4. For MCP Server:
    ```bash
    ps aux | grep mcp-server-waktu-solat
    ```
@@ -55,8 +88,9 @@ To check if the server is running properly:
 
 If you don't see the process running:
 1. Check Claude Desktop logs for any errors
-2. Ensure the configuration in `~/Library/Application Support/Claude/config.json` is correct
+2. Verify that the configuration in `~/Library/Application Support/Claude/claude_desktop_config.json` is correct and properly formatted
 3. Try restarting Claude Desktop
+4. Ensure the plugin is properly installed by running the verification commands above
 
 ### Stopping the Server
 
@@ -86,14 +120,13 @@ pkill -f waktu_solat.mcp_server
 pkill -f mcp-server-waktu-solat
 ```
 
-Note: The server will automatically restart when you open Claude Desktop again unless you remove the configuration from `config.json`.
+Note: The server will automatically restart when you open Claude Desktop again unless you remove the configuration from `claude_desktop_config.json`.
 
 ## Usage
 
 ### Running with Claude Desktop as UVX Plugin
 
-When installed as a UVX plugin, Claude Desktop should automatically detect and load the plugin.
-You can access the tools directly through Claude without any additional configuration.
+After installing the plugin and configuring Claude Desktop as described in the installation section, you can access the tools directly through Claude.
 
 Example prompts:
 - "What are the prayer times for KUL01 zone in Malaysia?"
@@ -151,8 +184,11 @@ uv pip install -e .
 
 4. To test the UVX plugin during development:
 ```bash
+# The plugin is located in src/uvx_plugin.py
 uvx run src/uvx_plugin.py
 ```
+
+Note: The UVX plugin implementation is in `src/uvx_plugin.py`. This is the main implementation with full API integration, caching, and proper error handling.
 
 ## License
 
