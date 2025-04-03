@@ -37,6 +37,57 @@ uv pip install -e .
 chmod +x bin/mcp-server-waktu-solat
 ```
 
+### Verifying Installation
+
+To check if the server is running properly:
+
+1. For UVX Plugin:
+   ```bash
+   ps aux | grep waktu_solat.mcp_server
+   ```
+   You should see a process running with `python -m waktu_solat.mcp_server`
+
+2. For MCP Server:
+   ```bash
+   ps aux | grep mcp-server-waktu-solat
+   ```
+   You should see a process running with the server script path
+
+If you don't see the process running:
+1. Check Claude Desktop logs for any errors
+2. Ensure the configuration in `~/Library/Application Support/Claude/config.json` is correct
+3. Try restarting Claude Desktop
+
+### Stopping the Server
+
+To stop the server process:
+
+1. Find the process ID (PID):
+   ```bash
+   # For UVX Plugin
+   ps aux | grep waktu_solat.mcp_server | grep -v grep | awk '{print $2}'
+   
+   # For MCP Server
+   ps aux | grep mcp-server-waktu-solat | grep -v grep | awk '{print $2}'
+   ```
+
+2. Stop the process:
+   ```bash
+   # Replace <PID> with the process ID from step 1
+   kill <PID>
+   ```
+
+Alternatively, you can use a single command:
+```bash
+# For UVX Plugin
+pkill -f waktu_solat.mcp_server
+
+# For MCP Server
+pkill -f mcp-server-waktu-solat
+```
+
+Note: The server will automatically restart when you open Claude Desktop again unless you remove the configuration from `config.json`.
+
 ## Usage
 
 ### Running with Claude Desktop as UVX Plugin
