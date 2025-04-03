@@ -38,6 +38,9 @@ DEFAULT_CONFIG_PATHS: Final[list[str]] = [
     "./config.json",
 ]
 
+# No required environment variables by default, can be modified if needed
+REQUIRED_ENV_VARS: Final[list[str]] = []
+
 
 @dataclass
 class CacheConfig:
@@ -158,27 +161,41 @@ class Config:
         Example: WAKTU_SOLAT_CACHE_TTL=7200
         """
         with self._lock:
+            # Validate required environment variables first
+            missing_vars = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
+            if missing_vars:
+                raise EnvironmentError(
+                    f"Missing required environment variables: {', '.join(missing_vars)}"
+                )
+
             # Cache config
-            if ttl := os.getenv("WAKTU_SOLAT_CACHE_TTL"):
-                self.cache.ttl = int(ttl)
-            if max_size := os.getenv("WAKTU_SOLAT_CACHE_MAX_SIZE"):
-                self.cache.max_size = int(max_size)
-            if cache_type := os.getenv("WAKTU_SOLAT_CACHE_TYPE"):
-                self.cache.type = cache_type
-            if redis_url := os.getenv("WAKTU_SOLAT_REDIS_URL"):
-                self.cache.redis_url = redis_url
+            self.cache.ttl = int(os.getenv("WAKTU_SOLAT_CACHE_TTL", self.cache.ttl))
+            self.cache.max_size = int(
+                os.getenv("WAKTU_SOLAT_CACHE_MAX_SIZE", self.cache.max_size)
+            )
+            self.cache.type = os.getenv("WAKTU_SOLAT_CACHE_TYPE", self.cache.type)
+            self.cache.redis_url = os.getenv(
+                "WAKTU_SOLAT_REDIS_URL", self.cache.redis_url
+            )
 
             # HTTP config
-            if timeout := os.getenv("WAKTU_SOLAT_HTTP_TIMEOUT"):
-                self.http.timeout = int(timeout)
-            if retries := os.getenv("WAKTU_SOLAT_HTTP_MAX_RETRIES"):
-                self.http.max_retries = int(retries)
-            if pool := os.getenv("WAKTU_SOLAT_HTTP_POOL_CONNECTIONS"):
-                self.http.pool_connections = int(pool)
-            if base_url := os.getenv("WAKTU_SOLAT_HTTP_BASE_URL"):
-                self.http.base_url = base_url
-            if verify_ssl := os.getenv("WAKTU_SOLAT_HTTP_VERIFY_SSL"):
-                self.http.verify_ssl = verify_ssl.lower() in ("true", "1", "yes")
+            self.http.timeout = int(
+                os.getenv("WAKTU_SOLAT_HTTP_TIMEOUT", self.http.timeout)
+            )
+            self.http.max_retries = int(
+                os.getenv("WAKTU_SOLAT_HTTP_MAX_RETRIES", self.http.max_retries)
+            )
+            self.http.pool_connections = int(
+                os.getenv(
+                    "WAKTU_SOLAT_HTTP_POOL_CONNECTIONS", self.http.pool_connections
+                )
+            )
+            self.http.base_url = os.getenv(
+                "WAKTU_SOLAT_HTTP_BASE_URL", self.http.base_url
+            )
+            self.http.verify_ssl = os.getenv(
+                "WAKTU_SOLAT_HTTP_VERIFY_SSL", str(self.http.verify_ssl)
+            ).lower() in ("true", "1", "yes")
 
     def load_from_file(self, path: Optional[str] = None) -> None:
         """

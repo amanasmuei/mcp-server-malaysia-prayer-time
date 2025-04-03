@@ -82,7 +82,15 @@ class HTTPClient:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Cleanup the async context."""
-        pass  # Keep client alive for reuse
+        if self._client:
+            try:
+                logger.debug("Closing HTTP client connection")
+                await self._client.aclose()
+            except Exception as e:
+                logger.error(f"Error closing HTTP client: {e}")
+            finally:
+                logger.debug("HTTP client connection closed")
+                self._client = None
 
     async def _request(self, method: str, path: str, **kwargs) -> Dict[str, Any]:
         """

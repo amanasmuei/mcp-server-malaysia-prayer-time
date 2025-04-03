@@ -1,0 +1,15 @@
+# Claude Desktop Configuration for Malaysia Prayer Time Server
+cache:
+  type: memory
+  ttl: 3600
+  max_size: 1000
+
+http:
+  timeout: 10
+  max_retries: 3
+  pool_connections: 10
+  base_url: "https://api.waktusolat.app"
+  verify_ssl: true
+
+# Required API key (replace with actual key)
+api_key: "REPLACE_WITH_ACTUAL_API_KEY"

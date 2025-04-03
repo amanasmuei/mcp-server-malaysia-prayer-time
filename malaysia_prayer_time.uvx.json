@@ -1,0 +1,34 @@
+{
+  "name": "malaysia-prayer-time",
+  "version": "0.2.0",
+  "description": "Malaysia Prayer Time UVX Plugin",
+  "tools": [
+    {
+      "name": "get_prayer_times",
+      "description": "Get prayer times for a specific zone in Malaysia",
+      "parameters": {
+        "zone": {
+          "type": "string",
+          "description": "The zone code (e.g., 'SGR01', 'KUL01', etc.)"
+        }
+      },
+      "required": ["zone"]
+    },
+    {
+      "name": "list_zones", 
+      "description": "List all available prayer time zones in Malaysia",
+      "parameters": {}
+    },
+    {
+      "name": "get_current_prayer",
+      "description": "Get the current prayer time status for a specific zone",
+      "parameters": {
+        "zone": {
+          "type": "string",
+          "description": "The zone code (e.g., 'SGR01', 'KUL01', etc.)"
+        }
+      },
+      "required": ["zone"]
+    }
+  ]
+} 

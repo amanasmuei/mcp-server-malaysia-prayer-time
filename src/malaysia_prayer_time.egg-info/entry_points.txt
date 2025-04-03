@@ -1,0 +1,5 @@
+[console_scripts]
+mcp-server-waktu-solat = waktu_solat.server:main
+
+[uvx.plugin]
+malaysia-prayer-time = uvx_plugin

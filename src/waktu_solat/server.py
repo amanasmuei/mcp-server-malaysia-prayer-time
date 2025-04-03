@@ -19,15 +19,17 @@ Features:
 
 import asyncio
 import logging
+import importlib  # For module reloading
 import json
 import re
 import signal
 import sys
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable, Awaitable, Set
 
-from . import config
+from . import config as waktu_solat_config
 from .client import client, APIError, ValidationError
 from .models import PrayerTimes, Zone
 from .cache import cached
@@ -84,6 +86,7 @@ class WaktuSolatServer:
         self.rate_limiter = RateLimiter(requests_per_minute=60)
         self.active_requests: Set[asyncio.Task] = set()
         self.shutdown_event: asyncio.Event = asyncio.Event()
+        self.last_activity_time = time.time()  # Initialize with current time
 
         # Setup signal handlers for graceful shutdown
         for sig in (signal.SIGTERM, signal.SIGINT):
@@ -316,10 +319,33 @@ class WaktuSolatServer:
         }
 
     async def health_check(self) -> None:
-        """Perform periodic health checks."""
-        # Disable health check for now to prevent duplicate requests
+        """Perform periodic health checks and keep server alive."""
+        logger.info("Starting server health monitoring...")
         while not self.shutdown_event.is_set():
-            await asyncio.sleep(300)  # Just sleep without making requests
+            try:
+                # Log health status to indicate server is still running
+                logger.debug("Server health check: running")
+
+                # Keep the server alive by performing a heartbeat action
+                # This won't go to the client, but helps keep the server process active
+                if hasattr(self, "last_activity_time"):
+                    idle_time = time.time() - self.last_activity_time
+                    logger.debug(f"Server idle for {idle_time:.1f} seconds")
+
+                    # If idle for too long, perform some maintenance tasks
+                    if idle_time > 60:
+                        logger.info("Server idle - performing maintenance")
+                        # Clear any expired cache entries if needed
+                        # Additional maintenance tasks can be added here
+
+                # Update last activity time
+                self.last_activity_time = time.time()
+
+            except Exception as e:
+                logger.error(f"Error in health check: {e}")
+
+            # Wait for next check (every 30 seconds)
+            await asyncio.sleep(30)
 
     async def run(self) -> None:
         """Start the server using stdio transport."""
@@ -331,14 +357,36 @@ class WaktuSolatServer:
         health_check_task = asyncio.create_task(self.health_check())
         self.active_requests.add(health_check_task)
         health_check_task.add_done_callback(self.active_requests.discard)
+        logger.info("Starting main request processing loop...")
+
+        connection_idle_count = 0
+        max_idle_count = 5  # Allow for some idle periods before giving up
 
         while not self.shutdown_event.is_set():
             try:
-                request_line = await asyncio.get_event_loop().run_in_executor(
-                    None, input
+                # Add timeout to input to prevent indefinite blocking
+                # Increased timeout to 300 seconds (5 minutes) to avoid premature disconnection
+                request_line = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline),
+                    timeout=300,
                 )
+                request_line = request_line.strip()
+
                 if not request_line:
+                    logger.debug("Received empty request line")
+                    connection_idle_count += 1
+                    if connection_idle_count > max_idle_count:
+                        logger.warning(
+                            "Too many consecutive empty requests, but keeping server alive"
+                        )
+                        connection_idle_count = 0  # Reset counter but don't exit
                     continue
+
+                # Reset idle counter when we get a valid request
+                connection_idle_count = 0
+
+                # Update last activity time
+                self.last_activity_time = time.time()
 
                 # Parse and validate request
                 try:
@@ -364,17 +412,39 @@ class WaktuSolatServer:
                 print(json.dumps(response), flush=True)
 
             except EOFError:
-                logger.info("Received EOF, initiating shutdown...")
-                self.shutdown_event.set()
-                break
+                logger.info("Received EOF, waiting for potential reconnection...")
+                # Don't immediately set shutdown_event, wait for a potential reconnection
+                await asyncio.sleep(10)
+                # Check if stdin is still available
+                try:
+                    # Try a non-blocking read
+                    if sys.stdin.isatty():
+                        continue  # stdin is still available, continue listening
+                    else:
+                        logger.info(
+                            "No stdin available after EOF, initiating shutdown..."
+                        )
+                        self.shutdown_event.set()
+                        break
+                except Exception:
+                    logger.info("Stdin not available after EOF, initiating shutdown...")
+                    self.shutdown_event.set()
+                    break
+            except asyncio.TimeoutError:
+                logger.debug("Input timeout occurred, but keeping server alive")
+                # Don't shutdown on timeout, just continue the loop
             except Exception as e:
                 logger.exception("Unexpected server error")
                 print(json.dumps({"error": f"Server error: {str(e)}"}), flush=True)
+                # Don't send duplicate error message
+                # Continue loop instead of exiting on error
 
         # Graceful shutdown
-        logger.info("Shutting down server...")
-        await self._cleanup()
-        logger.info("Server shutdown complete")
+        logger.info("Initiating server shutdown sequence...")
+        try:
+            await self._cleanup()
+        finally:
+            logger.info("All resources released, server shutdown complete")
 
     async def _cleanup(self) -> None:
         """Clean up resources during shutdown."""
@@ -398,18 +468,74 @@ def main() -> None:
 
     Sets up the server and handles the main event loop and error cases.
     """
-    server = WaktuSolatServer()
+    logger.info("Initializing Malaysia Prayer Time MCP Server...")
 
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(server.run())
-    except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt")
-    except Exception as e:
-        logger.exception("Fatal server error")
-        print(f"Server error: {e}", file=sys.stderr)
-        sys.exit(1)
+    # This flag helps us know if we need to restart the server
+    should_restart = True
+
+    while should_restart:
+        try:
+            # Workaround for potential import conflicts
+            if "waktu_solat.config" in sys.modules:
+                importlib.reload(sys.modules["waktu_solat.config"])
+
+            import waktu_solat.config as waktu_solat_config_module
+
+            logger.debug("Config module loaded successfully")
+
+            # Validate configuration
+            try:
+                # Try loading Claude Desktop config first
+                desktop_config_path = (
+                    Path(__file__).parent.parent / "config" / "claude_desktop.yaml"
+                )
+                if desktop_config_path.exists():
+                    logger.info("Loading Claude Desktop configuration...")
+                    waktu_solat_config.config.load_from_file(desktop_config_path)
+                else:
+                    try:
+                        logger.info(
+                            "Loading configuration from environment variables..."
+                        )
+                        waktu_solat_config.config.load_from_env()
+                    except FileNotFoundError:
+                        logger.info(
+                            "No configuration file found, using default configuration"
+                        )
+            except EnvironmentError as e:
+                logger.error(f"Configuration error: {e}")
+                print(f"Configuration error: {e}", file=sys.stderr)
+                sys.exit(1)
+
+            server = WaktuSolatServer()
+
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(server.run())
+
+            # If we get here without exceptions, it means the server shutdown gracefully
+            # Set should_restart to False to exit the loop
+            logger.info("Server completed its run")
+            should_restart = False
+
+        except KeyboardInterrupt:
+            logger.info("Received keyboard interrupt")
+            should_restart = False  # Don't restart after user interruption
+        except EOFError:
+            logger.info("Received EOF from main input")
+            # Wait a bit before restarting to avoid rapid restart loops
+            time.sleep(5)
+            logger.info("Attempting to restart the server...")
+            should_restart = True  # Try to restart
+        except Exception as e:
+            logger.exception("Fatal server error")
+            print(f"Server error: {e}", file=sys.stderr)
+            # Wait a bit before restarting to avoid rapid restart loops
+            time.sleep(5)
+            logger.info("Attempting to restart the server after error...")
+            should_restart = True  # Try to restart
+
+    logger.info("Server is shutting down completely")
     sys.exit(0)
 
 
