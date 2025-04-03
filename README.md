@@ -4,238 +4,128 @@
 
 # Malaysia Prayer Time MCP Server
 
-An MCP (Model Context Protocol) server that provides access to Malaysia Prayer Time data using the API from [github.com/mptwaktusolat/api-waktusolat](https://github.com/mptwaktusolat/api-waktusolat).
+A Model Context Protocol (MCP) server that provides prayer times for locations in Malaysia. This server integrates with Claude Desktop to provide real-time prayer time information using the pray.zone API.
 
 ## Features
 
-- Get prayer times for specific zones in Malaysia
-- List all available prayer time zones
-- Get current prayer time status for a zone
+- Get prayer times for any city in Malaysia
+- Get prayer times using latitude and longitude coordinates
+- Supports date-specific queries
+- Real-time data from pray.zone API
 
 ## Prerequisites
 
-1. Install Python 3.8 or higher
-
-2. Install UVX v1 (required for macOS compatibility):
-   ```bash
-   # First install pip if you haven't already
-   python3 -m ensurepip --upgrade
-   
-   # Install uvx version 1.x specifically
-   pip install "uvx<2.0.0"
-   ```
-
-3. Verify UVX installation:
-   ```bash
-   uvx --version
-   ```
-   If you get a "command not found" error:
-   - If NOT using a virtual environment, add Python user bin to PATH:
-     ```bash
-     # For macOS/Linux, add to ~/.zshrc or ~/.bashrc:
-     export PATH="$PATH:$(python3 -m site --user-base)/bin"
-     
-     # Then reload your shell:
-     source ~/.zshrc  # or source ~/.bashrc
-     ```
-   - If using a virtual environment, make sure it's activated:
-     ```bash
-     source .venv/bin/activate  # or your virtual environment path
-     ```
+- Python 3.10 or higher
+- Claude Desktop (latest version)
+- `uv` package manager (recommended)
 
 ## Installation
 
-### Option 1: Install as UVX Plugin (Recommended for Claude Desktop)
-
-1. Install the plugin directly from the repository:
+1. Clone this repository:
 ```bash
-pip install git+https://github.com/amanasmuei/mcp-server-malaysia-prayer-time.git
+git clone https://github.com/yourusername/mcp-server-malaysia-prayer-time.git
+cd mcp-server-malaysia-prayer-time
 ```
 
-2. Configure Claude Desktop to use the plugin:
-   - Create or edit the Claude Desktop configuration file:
-   ```bash
-   mkdir -p ~/Library/Application\ Support/Claude
-   touch ~/Library/Application\ Support/Claude/claude_desktop_config.json
-   ```
-   
-   - Add the following configuration to `claude_desktop_config.json`:
-   ```json
-   {
-     "mcpServers": {
-       "waktu-solat": {
-         "command": "uvx",
-         "args": ["run", "malaysia-prayer-time"],
-         "env": {}
-       }
-     }
-   }
-   ```
-
-3. Restart Claude Desktop to load the plugin.
-
-Note: While the plugin is automatically registered with UVX after installation, Claude Desktop currently requires manual configuration to use UVX plugins.
-
-If you don't see the process running:
-1. Check Claude Desktop logs for any errors
-2. Verify that the configuration in `~/Library/Application Support/Claude/claude_desktop_config.json` is correct and properly formatted
-3. Try restarting Claude Desktop
-4. Ensure the plugin is properly installed by running the verification commands above
-5. If you see "spawn uvx ENOENT" error:
-   - Make sure UVX is installed correctly (see Prerequisites section)
-   - If not using a virtual environment:
-     - Run `which uvx` to verify it's in your PATH
-     - If not found, add Python user bin to PATH as described in Prerequisites
-   - If using a virtual environment:
-     - Make sure your virtual environment is activated
-     - Run `which uvx` to verify it's available
-   - Restart your terminal and Claude Desktop
-
-### Option 2: Install as MCP Server
-
-1. Create a virtual environment and install dependencies using uv:
+2. Create and activate a virtual environment using `uv`:
 ```bash
 uv venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
+
+3. Install the package in editable mode:
+```bash
 uv pip install -e .
 ```
 
-2. Make the server executable:
+## Configuration with Claude Desktop
+
+1. Create or edit the Claude Desktop configuration file:
 ```bash
-chmod +x bin/mcp-server-waktu-solat
+# On macOS
+mkdir -p ~/Library/Application\ Support/Claude/
+nano ~/Library/Application\ Support/Claude/claude_desktop_config.json
 ```
 
-### Verifying Installation
-
-To check if the plugin is properly installed:
-
-1. Check if the plugin is installed in your Python environment:
-   ```bash
-   pip list | grep malaysia-prayer-time
-   ```
-
-2. Check if the UVX plugin is registered:
-   ```bash
-   uvx list-plugins
-   ```
-
-3. Check if the server process is running:
-   ```bash
-   # For UVX Plugin
-   ps aux | grep waktu_solat.mcp_server
-   ```
-   You should see a process running with `python -m waktu_solat.mcp_server`
-
-4. For MCP Server:
-   ```bash
-   ps aux | grep mcp-server-waktu-solat
-   ```
-   You should see a process running with the server script path
-
-If you don't see the process running:
-1. Check Claude Desktop logs for any errors
-2. Verify that the configuration in `~/Library/Application Support/Claude/claude_desktop_config.json` is correct and properly formatted
-3. Try restarting Claude Desktop
-4. Ensure the plugin is properly installed by running the verification commands above
-
-### Stopping the Server
-
-To stop the server process:
-
-1. Find the process ID (PID):
-   ```bash
-   # For UVX Plugin
-   ps aux | grep waktu_solat.mcp_server | grep -v grep | awk '{print $2}'
-   
-   # For MCP Server
-   ps aux | grep mcp-server-waktu-solat | grep -v grep | awk '{print $2}'
-   ```
-
-2. Stop the process:
-   ```bash
-   # Replace <PID> with the process ID from step 1
-   kill <PID>
-   ```
-
-Alternatively, you can use a single command:
-```bash
-# For UVX Plugin
-pkill -f waktu_solat.mcp_server
-
-# For MCP Server
-pkill -f mcp-server-waktu-solat
+2. Add the following configuration (adjust paths according to your setup):
+```json
+{
+    "mcpServers": {
+        "malaysia-prayer-time": {
+            "command": "/absolute/path/to/your/.venv/bin/python",
+            "args": [
+                "-m",
+                "malaysia_prayer_time"
+            ],
+            "cwd": "/absolute/path/to/mcp-server-malaysia-prayer-time"
+        }
+    }
+}
 ```
 
-Note: The server will automatically restart when you open Claude Desktop again unless you remove the configuration from `claude_desktop_config.json`.
+3. Restart Claude Desktop completely
 
 ## Usage
 
-### Running with Claude Desktop as UVX Plugin
-
-After installing the plugin and configuring Claude Desktop as described in the installation section, you can access the tools directly through Claude.
-
-Example prompts:
-- "What are the prayer times for KUL01 zone in Malaysia?"
-- "List all available prayer time zones in Malaysia"
-- "What is the current prayer time for SGR01 zone?"
-
-### Running in Claude Desktop as MCP Server
-
-1. Add the following configuration to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-```json
-{
-  "mcpServers": {
-    "waktu-solat": {
-      "command": "uvx",
-      "args": ["run", "/absolute/path/to/bin/mcp-server-waktu-solat"],
-      "env": {}
-    }
-  }
-}
-```
-Replace `/absolute/path/to/` with the actual path where you cloned this repository.
-
-2. Restart Claude Desktop to load the new MCP server.
-
-### Available Tools
-
-The server implements the following tools:
+Once configured, you can use the following tools in Claude Desktop:
 
 ### get_prayer_times
-Get prayer times for a specific zone in Malaysia
-- Input: `zone` (string) - The zone code (e.g., 'SGR01', 'KUL01')
+Get prayer times for any city in Malaysia.
 
-### list_zones
-List all available prayer time zones in Malaysia
-- No input required
+Example queries:
+- "What are the prayer times for Kuala Lumpur today?"
+- "Show me prayer times for Penang, Malaysia"
+- "Get prayer schedule for Johor Bahru for tomorrow"
 
-### get_current_prayer
-Get the current prayer time status for a specific zone
-- Input: `zone` (string) - The zone code (e.g., 'SGR01', 'KUL01')
+### get_prayer_times_by_coordinates
+Get prayer times using latitude and longitude coordinates.
 
-## Development
+Example queries:
+- "What are the prayer times at coordinates 3.1390, 101.6869?"
+- "Show prayer schedule for location 5.4141, 100.3288"
 
-1. Clone the repository
-2. Install development dependencies:
+## Prayer Times Information
+
+The server provides the following prayer times:
+- Imsak
+- Fajr
+- Sunrise
+- Dhuhr
+- Asr
+- Sunset
+- Maghrib
+- Isha
+- Midnight
+
+## Troubleshooting
+
+If you encounter any issues:
+
+1. Check Claude Desktop logs:
 ```bash
-uv venv
-source .venv/bin/activate
-uv pip install -e .
+tail -f ~/Library/Logs/Claude/mcp*.log
 ```
 
-3. Run the server:
+2. Verify the server runs manually:
 ```bash
-./bin/mcp-server-waktu-solat
+python -m malaysia_prayer_time
 ```
 
-4. To test the UVX plugin during development:
-```bash
-# The plugin is located in src/uvx_plugin.py
-uvx run src/uvx_plugin.py
-```
+3. Common issues:
+   - Make sure all paths in `claude_desktop_config.json` are absolute
+   - Ensure Python 3.10+ is used in the virtual environment
+   - Verify Claude Desktop is updated to the latest version
 
-Note: The UVX plugin implementation is in `src/uvx_plugin.py`. This is the main implementation with full API integration, caching, and proper error handling.
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-See [LICENSE](LICENSE) file.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- [Model Context Protocol](https://modelcontextprotocol.io/) - For the MCP framework
+- [pray.zone API](https://pray.zone/) - For providing prayer time data
+- Claude Desktop - For the MCP integration platform
