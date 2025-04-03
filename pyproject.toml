@@ -1,14 +1,19 @@
 [project]
-name = "mcp-server-waktu-solat"
-version = "0.1.0"
-description = "Malaysia Prayer Time MCP Server"
-authors = []
-dependencies = [
-    "requests>=2.31.0",
-    "pydantic>=2.6.0"
+name = "mcp-server-malaysia-prayer-time"
+version = "0.2.0"
+description = "MCP Server for Malaysia Prayer Times"
+authors = [
+    {name = "Aman"}
 ]
-requires-python = ">=3.9"
+dependencies = [
+    "httpx>=0.24.0",
+    "pydantic>=2.0.0"
+]
+requires-python = ">=3.8"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+mcp-server-waktu-solat = "waktu_solat.server:main"
