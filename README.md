@@ -15,22 +15,33 @@ An MCP (Model Context Protocol) server that provides access to Malaysia Prayer T
 ## Prerequisites
 
 1. Install Python 3.8 or higher
-2. Install UVX CLI tool:
+
+2. Install UVX v1 (required for macOS compatibility):
    ```bash
-   pip install uvx-cli
+   # First install pip if you haven't already
+   python3 -m ensurepip --upgrade
+   
+   # Install uvx version 1.x specifically
+   pip install "uvx<2.0.0"
    ```
+
 3. Verify UVX installation:
    ```bash
    uvx --version
    ```
-   If you get a "command not found" error, make sure your Python scripts directory is in your PATH:
-   ```bash
-   # For macOS/Linux, add to ~/.zshrc or ~/.bashrc:
-   export PATH="$PATH:$(python3 -m site --user-base)/bin"
-   
-   # Then reload your shell:
-   source ~/.zshrc  # or source ~/.bashrc
-   ```
+   If you get a "command not found" error:
+   - If NOT using a virtual environment, add Python user bin to PATH:
+     ```bash
+     # For macOS/Linux, add to ~/.zshrc or ~/.bashrc:
+     export PATH="$PATH:$(python3 -m site --user-base)/bin"
+     
+     # Then reload your shell:
+     source ~/.zshrc  # or source ~/.bashrc
+     ```
+   - If using a virtual environment, make sure it's activated:
+     ```bash
+     source .venv/bin/activate  # or your virtual environment path
+     ```
 
 ## Installation
 
@@ -71,9 +82,13 @@ If you don't see the process running:
 3. Try restarting Claude Desktop
 4. Ensure the plugin is properly installed by running the verification commands above
 5. If you see "spawn uvx ENOENT" error:
-   - Make sure UVX is installed: `pip install uvx-cli`
-   - Verify UVX is in your PATH: `which uvx`
-   - If not found, add Python scripts to PATH as described in Prerequisites
+   - Make sure UVX is installed correctly (see Prerequisites section)
+   - If not using a virtual environment:
+     - Run `which uvx` to verify it's in your PATH
+     - If not found, add Python user bin to PATH as described in Prerequisites
+   - If using a virtual environment:
+     - Make sure your virtual environment is activated
+     - Run `which uvx` to verify it's available
    - Restart your terminal and Claude Desktop
 
 ### Option 2: Install as MCP Server
