@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: mcp-server-malaysia-prayer-time
+Version: 0.2.0
+Summary: MCP Server for Malaysia Prayer Times
+Author: Aman
+Requires-Python: >=3.8
+License-File: LICENSE
+Requires-Dist: httpx>=0.24.0
+Requires-Dist: pydantic>=2.0.0
+Dynamic: license-file

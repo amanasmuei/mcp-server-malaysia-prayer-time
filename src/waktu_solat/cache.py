@@ -1,12 +1,26 @@
 """
-Simple in-memory cache implementation with TTL support.
+Thread-safe in-memory cache implementation with TTL support.
+
+This module provides a simple but robust caching mechanism with the following features:
+- Thread-safe operations
+- TTL (Time To Live) support
+- Automatic cleanup of expired entries
+- Capacity management to prevent memory leaks
+- Decorator support for easy function result caching
 """
 
-from typing import Dict, Any, Optional, TypeVar, Generic, Callable
+from __future__ import annotations
+import logging
+import threading
 import time
 from dataclasses import dataclass
 from functools import wraps
+from typing import Dict, Any, Optional, TypeVar, Generic, Callable
+
 from .config import config
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
@@ -22,10 +36,12 @@ class CacheEntry(Generic[T]):
 class Cache:
     """Thread-safe in-memory cache with TTL support."""
 
-    def __init__(self):
-        self._store: Dict[str, CacheEntry] = {}
-        self._max_size = config.cache.max_size
-        self._ttl = config.cache.ttl
+    def __init__(self) -> None:
+        """Initialize a new cache instance."""
+        self._store: Dict[str, CacheEntry[Any]] = {}
+        self._max_size: int = config.cache.max_size
+        self._ttl: int = config.cache.ttl
+        self._lock: threading.RLock = threading.RLock()
 
     def _clean_expired(self) -> None:
         """Remove expired entries from cache."""
@@ -33,8 +49,10 @@ class Cache:
         expired_keys = [
             key for key, entry in self._store.items() if entry.expires_at <= now
         ]
-        for key in expired_keys:
-            del self._store[key]
+        if expired_keys:
+            for key in expired_keys:
+                del self._store[key]
+            logger.debug(f"Cleaned {len(expired_keys)} expired entries from cache")
 
     def _ensure_capacity(self) -> None:
         """Ensure cache doesn't exceed max size by removing oldest entries."""
@@ -44,41 +62,74 @@ class Cache:
             sorted_items = sorted(self._store.items(), key=lambda x: x[1].expires_at)
             for key, _ in sorted_items[:num_to_remove]:
                 del self._store[key]
+            logger.debug(f"Removed {num_to_remove} entries to ensure cache capacity")
 
     def get(self, key: str) -> Optional[Any]:
         """
         Get a value from cache.
-        Returns None if key doesn't exist or entry has expired.
+
+        Args:
+            key: The key to look up
+
+        Returns:
+            The cached value if it exists and hasn't expired, None otherwise
         """
-        self._clean_expired()
+        with self._lock:
+            self._clean_expired()
 
-        entry = self._store.get(key)
-        if entry is None:
-            return None
+            entry = self._store.get(key)
+            if entry is None:
+                logger.debug(f"Cache miss for key: {key}")
+                return None
 
-        if entry.expires_at <= time.time():
-            del self._store[key]
-            return None
+            if entry.expires_at <= time.time():
+                del self._store[key]
+                logger.debug(f"Cache entry expired for key: {key}")
+                return None
 
-        return entry.value
+            logger.debug(f"Cache hit for key: {key}")
+            return entry.value
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
         """
         Set a value in cache with optional TTL override.
-        """
-        self._clean_expired()
-        self._ensure_capacity()
 
-        expires_at = time.time() + (ttl if ttl is not None else self._ttl)
-        self._store[key] = CacheEntry(value, expires_at)
+        Args:
+            key: The key to store the value under
+            value: The value to cache
+            ttl: Optional TTL override in seconds. Must be positive if provided.
+
+        Raises:
+            ValueError: If TTL is not a positive integer
+        """
+        if ttl is not None and ttl <= 0:
+            raise ValueError("TTL must be a positive integer")
+
+        with self._lock:
+            self._clean_expired()
+            self._ensure_capacity()
+
+            effective_ttl = ttl if ttl is not None else self._ttl
+            expires_at = time.time() + effective_ttl
+            self._store[key] = CacheEntry(value, expires_at)
+            logger.debug(f"Cache set for key: {key} with TTL: {effective_ttl}s")
 
     def delete(self, key: str) -> None:
-        """Remove a key from cache."""
-        self._store.pop(key, None)
+        """
+        Remove a key from cache.
+
+        Args:
+            key: The key to remove
+        """
+        with self._lock:
+            if self._store.pop(key, None) is not None:
+                logger.debug(f"Deleted cache entry for key: {key}")
 
     def clear(self) -> None:
         """Clear all entries from cache."""
-        self._store.clear()
+        with self._lock:
+            self._store.clear()
+            logger.debug("Cache cleared")
 
 
 # Global cache instance
