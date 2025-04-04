@@ -251,6 +251,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 <div align="center">
-  <p>Created by <a href="https://github.com/yourusername">Your Name</a></p>
-  <p>📧 contact@example.com</p>
+  <p>Created by <a href="https://github.com/amanasmuei">abdul rahman m asmuei</a></p>
+  <p>amanasmuei@gmail.com</p>
 </div>
