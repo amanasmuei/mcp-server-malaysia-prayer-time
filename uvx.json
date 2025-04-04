@@ -6,14 +6,41 @@
   "tools": [
     {
       "name": "get_prayer_times",
-      "description": "Get prayer times for a specific zone in Malaysia",
+      "description": "Get prayer times for a specific city in Malaysia",
       "parameters": {
-        "zone": {
+        "city": {
           "type": "string",
-          "description": "The zone code (e.g., 'SGR01', 'KUL01', etc.)"
+          "description": "Name of the city (default: kuala lumpur)"
+        },
+        "country": {
+          "type": "string",
+          "description": "Country name (default: malaysia)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date in YYYY-MM-DD format or 'today' (default: today)"
         }
       },
-      "required": ["zone"]
+      "required": ["city"]
+    },
+    {
+      "name": "get_prayer_times_by_coordinates",
+      "description": "Get prayer times for a specific location using coordinates",
+      "parameters": {
+        "latitude": {
+          "type": "number",
+          "description": "Latitude of the location"
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Longitude of the location"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date in YYYY-MM-DD format or 'today' (default: today)"
+        }
+      },
+      "required": ["latitude", "longitude"]
     },
     {
       "name": "list_zones", 

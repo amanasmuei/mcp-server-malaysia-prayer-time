@@ -92,6 +92,27 @@ class HTTPClient:
                 logger.debug("HTTP client connection closed")
                 self._client = None
 
+    async def _get_client(self) -> httpx.AsyncClient:
+        """
+        Get the httpx client instance, creating it if needed.
+
+        Returns:
+            The httpx AsyncClient instance
+
+        Raises:
+            RuntimeError: If the client cannot be initialized
+        """
+        if not self._client:
+            logger.debug("Creating new HTTP client instance")
+            self._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(config.http.timeout),
+                limits=httpx.Limits(
+                    max_connections=config.http.pool_connections,
+                    max_keepalive_connections=config.http.pool_connections,
+                ),
+            )
+        return self._client
+
     async def _request(self, method: str, path: str, **kwargs) -> Dict[str, Any]:
         """
         Make an HTTP request to the API with retry logic.
@@ -181,30 +202,123 @@ class HTTPClient:
         logger.info(f"Fetching prayer times for zone: {zone}")
         data = await self._request("GET", f"/v2/solat/{zone}")
 
-        if not isinstance(data, list):
-            raise ResponseError("Invalid prayer times data format in response")
+        # Check if the response is the new format (object with prayers array)
+        if (
+            isinstance(data, dict)
+            and "prayers" in data
+            and isinstance(data["prayers"], list)
+        ):
+            prayers_data = data["prayers"]
+        elif isinstance(data, list):
+            # Fallback to old format (direct array)
+            prayers_data = data
+        else:
+            logger.error(f"Invalid data format received: {type(data)}. Data: {data}")
+            raise ResponseError(
+                f"Invalid prayer times data format in response. Received: {type(data).__name__}, data: {data}"
+            )
+
+        # If there are no prayer times, return an empty list
+        if not prayers_data:
+            logger.warning(f"No prayer times found for zone {zone}")
+            return []
 
         # Transform waktusolat.app v2 format to our model format
         prayer_times = []
-        for item in data:
+        for item in prayers_data:
+            # Check if we have all the required fields
+            if not all(
+                key in item
+                for key in ["day", "fajr", "dhuhr", "asr", "maghrib", "isha", "syuruk"]
+            ):
+                logger.warning(f"Skipping incomplete prayer time data: {item}")
+                continue
+
+            # Handle different date formats in the new API
+            date_str = None
+            if "date" in item:
+                date_str = item.get("date")
+            else:
+                # Reconstruct date from the current API response
+                # Extract year and month from the parent object if available
+                year = (
+                    data.get("year", datetime.now().year)
+                    if isinstance(data, dict)
+                    else datetime.now().year
+                )
+                month = (
+                    data.get("month", datetime.now().strftime("%b").upper())
+                    if isinstance(data, dict)
+                    else datetime.now().strftime("%b").upper()
+                )
+                day = item.get("day", 1)
+
+                # Try to parse the month if it's a string
+                if isinstance(month, str):
+                    try:
+                        month_num = datetime.strptime(month, "%b").month
+                    except ValueError:
+                        try:
+                            month_num = datetime.strptime(month, "%B").month
+                        except ValueError:
+                            # Default to current month if parsing fails
+                            month_num = datetime.now().month
+                else:
+                    month_num = month
+
+                date_str = f"{year}-{month_num:02d}-{day:02d}"
+
+            # Convert Unix timestamps to time strings if needed
+            time_fields = ["fajr", "syuruk", "dhuhr", "asr", "maghrib", "isha"]
+            times = {}
+
+            for field in time_fields:
+                time_value = item.get(field)
+                if time_value is None:
+                    times[field] = None
+                    continue
+
+                # Try to convert timestamp to time string
+                if isinstance(time_value, int):
+                    try:
+                        # Convert to HH:MM format - API returns Unix timestamp in seconds
+                        dt = datetime.fromtimestamp(time_value)
+                        times[field] = dt.strftime("%H:%M")
+                    except (ValueError, OSError, OverflowError) as e:
+                        logger.warning(
+                            f"Error converting timestamp {time_value} for {field}: {e}"
+                        )
+                        times[field] = None
+                else:
+                    # Already a string, validate format or None
+                    times[field] = time_value if isinstance(time_value, str) else None
+
             transformed = {
-                "date": item.get("date"),
-                "day": datetime.strptime(item.get("date", ""), "%Y-%m-%d").strftime(
-                    "%A"
+                "date": date_str,
+                "day": (
+                    datetime.strptime(date_str, "%Y-%m-%d").strftime("%A")
+                    if date_str
+                    else ""
                 ),
-                "imsak": item.get("imsak"),
-                "fajr": item.get("fajr"),
-                "syuruk": item.get("syuruk"),
-                "dhuhr": item.get("dhuhr"),
-                "asr": item.get("asr"),
-                "maghrib": item.get("maghrib"),
-                "isha": item.get("isha"),
+                "imsak": item.get("imsak"),  # Might be None in new API
+                "fajr": times["fajr"],
+                "syuruk": times["syuruk"],
+                "dhuhr": times["dhuhr"],
+                "asr": times["asr"],
+                "maghrib": times["maghrib"],
+                "isha": times["isha"],
             }
+
             try:
                 prayer_times.append(PrayerTimes.model_validate(transformed))
-            except ValueError:
-                logger.warning(f"Skipping invalid prayer time data: {item}")
+            except ValueError as e:
+                logger.warning(f"Skipping invalid prayer time data: {item}. Error: {e}")
                 continue
+
+        # If we couldn't parse any prayer times, return empty
+        if not prayer_times:
+            logger.warning(f"Could not parse any valid prayer times for zone {zone}")
+            return []
 
         return prayer_times
 
@@ -292,24 +406,74 @@ class HTTPClient:
         # Get today's prayer times and calculate current prayer
         data = await self._request("GET", f"/v2/solat/{zone}")
 
-        if not isinstance(data, list):
-            raise ResponseError("Invalid prayer times data format in response")
+        # Check if the response is the new format (object with prayers array)
+        if (
+            isinstance(data, dict)
+            and "prayers" in data
+            and isinstance(data["prayers"], list)
+        ):
+            prayers_data = data["prayers"]
+        elif isinstance(data, list):
+            # Fallback to old format (direct array)
+            prayers_data = data
+        else:
+            logger.error(f"Invalid data format received: {type(data)}. Data: {data}")
+            raise ResponseError(
+                f"Invalid prayer times data format in response. Received: {type(data).__name__}, data: {data}"
+            )
 
         # Find today's prayer times
         today = datetime.now().strftime("%Y-%m-%d")
-        today_data = next((item for item in data if item.get("date") == today), None)
+        today_data = None
+
+        # First try to find an exact date match
+        for item in prayers_data:
+            if "date" in item and item.get("date") == today:
+                today_data = item
+                break
+
+        # If not found, try to match by day number for the current month
+        if not today_data:
+            current_day = datetime.now().day
+            for item in prayers_data:
+                if item.get("day") == current_day:
+                    today_data = item
+                    break
+
+        # If still not found, use the first available day
+        if not today_data and prayers_data:
+            logger.warning(
+                f"No exact date match found for {today}. Using first available day."
+            )
+            today_data = prayers_data[0]
 
         if not today_data:
             raise ResponseError("No prayer times available for today")
 
-        times = {
-            "fajr": today_data.get("fajr"),
-            "syuruk": today_data.get("syuruk"),
-            "dhuhr": today_data.get("dhuhr"),
-            "asr": today_data.get("asr"),
-            "maghrib": today_data.get("maghrib"),
-            "isha": today_data.get("isha"),
-        }
+        # Convert Unix timestamps to time strings if needed
+        time_fields = ["fajr", "syuruk", "dhuhr", "asr", "maghrib", "isha"]
+        times = {}
+
+        for field in time_fields:
+            time_value = today_data.get(field)
+            if time_value is None:
+                times[field] = None
+                continue
+
+            # Try to convert timestamp to time string
+            if isinstance(time_value, int):
+                try:
+                    # Convert to HH:MM format - API returns Unix timestamp in seconds
+                    dt = datetime.fromtimestamp(time_value)
+                    times[field] = dt.strftime("%H:%M")
+                except (ValueError, OSError, OverflowError) as e:
+                    logger.warning(
+                        f"Error converting timestamp {time_value} for {field}: {e}"
+                    )
+                    times[field] = None
+            else:
+                # Already a string, validate format or None
+                times[field] = time_value if isinstance(time_value, str) else None
 
         now = datetime.now().time()
         prayers = ["fajr", "syuruk", "dhuhr", "asr", "maghrib", "isha"]
@@ -317,7 +481,7 @@ class HTTPClient:
         next_prayer = None
 
         for i, prayer in enumerate(prayers):
-            if prayer not in times:
+            if prayer not in times or times[prayer] is None:
                 continue
             try:
                 prayer_time = datetime.strptime(times[prayer], "%H:%M").time()

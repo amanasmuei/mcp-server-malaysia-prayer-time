@@ -32,7 +32,7 @@ class PrayerTimes(BaseModel):
 
     date: str = Field(..., description="Date in YYYY-MM-DD format")
     day: str = Field(..., description="Day of the week")
-    imsak: str = Field(..., description="Pre-dawn meal time")
+    imsak: str | None = Field(None, description="Pre-dawn meal time")
     fajr: str = Field(..., description="Dawn prayer time")
     syuruk: str = Field(..., description="Sunrise time")
     dhuhr: str = Field(..., description="Noon prayer time")
@@ -52,8 +52,10 @@ class PrayerTimes(BaseModel):
 
     @field_validator("imsak", "fajr", "syuruk", "dhuhr", "asr", "maghrib", "isha")
     @classmethod
-    def validate_time(cls, v: str) -> str:
+    def validate_time(cls, v: str | None) -> str | None:
         """Validate time format."""
+        if v is None:
+            return None
         if not TIME_PATTERN.match(v):
             raise ValueError("Invalid time format. Expected HH:mm")
         return v
