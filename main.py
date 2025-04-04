@@ -5,6 +5,7 @@ import asyncio
 import sys
 import os
 import re
+from datetime import datetime
 
 # Add the src directory to the Python path
 src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
@@ -23,7 +24,7 @@ async def format_prayer_times(prayer_times: List[PrayerTimes]) -> str:
     if not prayer_times:
         return "No prayer times available"
 
-    # Get the first prayer time available (most likely today or closest available date)
+    # Get the first prayer time available
     prayer_time = prayer_times[0]
 
     # Format the prayer times in a readable form
@@ -40,38 +41,6 @@ async def format_prayer_times(prayer_times: List[PrayerTimes]) -> str:
     time_str = "\n".join(formatted_times)
 
     return f"""Prayer Times for {prayer_time.date} ({prayer_time.day}):\n{time_str}"""
-
-
-@mcp_server.tool()
-async def debug_api_response(zone_code: str = "SGR03") -> str:
-    """Debug the raw API response for a specific zone.
-
-    Args:
-        zone_code: Zone code (e.g., 'SGR03') (default: SGR03)
-    """
-    try:
-        # Get raw API response
-        async with waktu_client as client:
-            data = await client._request("GET", f"/v2/solat/{zone_code}")
-
-        # Format as a string with basic information
-        if isinstance(data, dict) and "prayers" in data:
-            prayers_count = len(data["prayers"])
-            first_prayer = data["prayers"][0] if prayers_count > 0 else "No prayers"
-
-            return f"""API Response for zone {zone_code}:
-Zone: {data.get('zone')}
-Year: {data.get('year')}
-Month: {data.get('month')}
-Last Updated: {data.get('last_updated')}
-Number of prayers: {prayers_count}
-First prayer: {first_prayer}
-"""
-        else:
-            return f"Raw API response: {data}"
-
-    except Exception as e:
-        return f"Error debugging API: {str(e)}\nType: {type(e).__name__}\n{str(e.__traceback__)}"
 
 
 @mcp_server.tool()
@@ -122,17 +91,12 @@ async def get_prayer_times(
             prayer_times = await client.get_prayer_times(zone_code)
 
         if not prayer_times:
-            # If no prayer times are available, debug the API response
-            debug_info = await debug_api_response(zone_code)
-            return f"No prayer times available for {zone_code}.\n\nDebug info:\n{debug_info}"
+            return f"No prayer times available for {zone_code}."
 
         return await format_prayer_times(prayer_times)
 
     except Exception as e:
-        import traceback
-
-        tb = traceback.format_exc()
-        return f"Error fetching prayer times: {str(e)}\nType: {type(e).__name__}\n{tb}"
+        return f"Error fetching prayer times: {str(e)}"
 
 
 @mcp_server.tool()
@@ -147,8 +111,7 @@ async def get_prayer_times_by_coordinates(
         date: Date in YYYY-MM-DD format or 'today' (default: today)
     """
     try:
-        # Define a simplified mapping of major zone codes to coordinates
-        # This is a basic implementation - a more complete solution would include all zones
+        # Define a mapping of major zone codes to coordinates
         zone_coordinates = {
             "SGR01": (3.0738, 101.5183),  # Petaling
             "SGR02": (3.3333, 101.5000),  # Gombak
@@ -172,7 +135,6 @@ async def get_prayer_times_by_coordinates(
 
         for zone_code, (zone_lat, zone_lon) in zone_coordinates.items():
             # Simple Euclidean distance calculation
-            # In a production system, you might use the Haversine formula for more accuracy
             distance = ((latitude - zone_lat) ** 2 + (longitude - zone_lon) ** 2) ** 0.5
 
             if distance < min_distance:
@@ -187,17 +149,14 @@ async def get_prayer_times_by_coordinates(
             prayer_times = await client.get_prayer_times(zone_code)
 
         if not prayer_times:
-            # If no prayer times are available, debug the API response
-            debug_info = await debug_api_response(zone_code)
-            return f"No prayer times available for coordinates ({latitude}, {longitude}) using zone {zone_code}.\n\nDebug info:\n{debug_info}"
+            return (
+                f"No prayer times available for coordinates ({latitude}, {longitude})."
+            )
 
         return await format_prayer_times(prayer_times)
 
     except Exception as e:
-        import traceback
-
-        tb = traceback.format_exc()
-        return f"Error fetching prayer times by coordinates: {str(e)}\nType: {type(e).__name__}\n{tb}"
+        return f"Error fetching prayer times by coordinates: {str(e)}"
 
 
 @mcp_server.tool()

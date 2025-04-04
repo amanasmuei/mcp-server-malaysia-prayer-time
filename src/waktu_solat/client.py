@@ -151,20 +151,16 @@ class HTTPClient:
 
                 try:
                     data = response.json()
-                except ValueError as e:
-                    # Log the actual response content for debugging
-                    logger.error(f"Invalid JSON response content: {response.text}")
-                    raise ResponseError(f"Invalid JSON response: {str(e)}")
+                except ValueError:
+                    raise ResponseError("Invalid JSON response")
 
                 if not data:
                     raise ResponseError("Empty response from API")
 
-                # Log successful response data for debugging
-                logger.debug(f"Successfully received response from {url}: {data}")
                 return data
 
             except httpx.HTTPStatusError as e:
-                error_msg = f"HTTP {e.response.status_code}: {e.response.text}"
+                error_msg = f"HTTP {e.response.status_code}"
                 if attempt == self._retry_count - 1:
                     logger.error(error_msg)
                     raise APIError(error_msg)
@@ -175,7 +171,7 @@ class HTTPClient:
                 if attempt == self._retry_count - 1:
                     logger.error(error_msg)
                     raise ConnectionError(error_msg)
-                logger.warning(f"Request failed (attempt {attempt + 1}): {error_msg}")
+                logger.warning(f"Request failed (attempt {attempt + 1})")
 
             except Exception as e:
                 error_msg = f"Unexpected error: {str(e)}"
@@ -213,10 +209,8 @@ class HTTPClient:
             # Fallback to old format (direct array)
             prayers_data = data
         else:
-            logger.error(f"Invalid data format received: {type(data)}. Data: {data}")
-            raise ResponseError(
-                f"Invalid prayer times data format in response. Received: {type(data).__name__}, data: {data}"
-            )
+            logger.error(f"Invalid data format received: {type(data)}")
+            raise ResponseError("Invalid prayer times data format in response")
 
         # If there are no prayer times, return an empty list
         if not prayers_data:
@@ -231,7 +225,7 @@ class HTTPClient:
                 key in item
                 for key in ["day", "fajr", "dhuhr", "asr", "maghrib", "isha", "syuruk"]
             ):
-                logger.warning(f"Skipping incomplete prayer time data: {item}")
+                logger.warning(f"Skipping incomplete prayer time data")
                 continue
 
             # Handle different date formats in the new API
@@ -284,10 +278,8 @@ class HTTPClient:
                         # Convert to HH:MM format - API returns Unix timestamp in seconds
                         dt = datetime.fromtimestamp(time_value)
                         times[field] = dt.strftime("%H:%M")
-                    except (ValueError, OSError, OverflowError) as e:
-                        logger.warning(
-                            f"Error converting timestamp {time_value} for {field}: {e}"
-                        )
+                    except (ValueError, OSError, OverflowError):
+                        logger.warning(f"Error converting timestamp for {field}")
                         times[field] = None
                 else:
                     # Already a string, validate format or None
@@ -311,8 +303,8 @@ class HTTPClient:
 
             try:
                 prayer_times.append(PrayerTimes.model_validate(transformed))
-            except ValueError as e:
-                logger.warning(f"Skipping invalid prayer time data: {item}. Error: {e}")
+            except ValueError:
+                logger.warning("Skipping invalid prayer time data")
                 continue
 
         # If we couldn't parse any prayer times, return empty
@@ -417,10 +409,8 @@ class HTTPClient:
             # Fallback to old format (direct array)
             prayers_data = data
         else:
-            logger.error(f"Invalid data format received: {type(data)}. Data: {data}")
-            raise ResponseError(
-                f"Invalid prayer times data format in response. Received: {type(data).__name__}, data: {data}"
-            )
+            logger.error(f"Invalid data format received: {type(data)}")
+            raise ResponseError("Invalid prayer times data format in response")
 
         # Find today's prayer times
         today = datetime.now().strftime("%Y-%m-%d")
@@ -442,9 +432,7 @@ class HTTPClient:
 
         # If still not found, use the first available day
         if not today_data and prayers_data:
-            logger.warning(
-                f"No exact date match found for {today}. Using first available day."
-            )
+            logger.warning(f"No exact date match found. Using first available day.")
             today_data = prayers_data[0]
 
         if not today_data:
@@ -466,10 +454,8 @@ class HTTPClient:
                     # Convert to HH:MM format - API returns Unix timestamp in seconds
                     dt = datetime.fromtimestamp(time_value)
                     times[field] = dt.strftime("%H:%M")
-                except (ValueError, OSError, OverflowError) as e:
-                    logger.warning(
-                        f"Error converting timestamp {time_value} for {field}: {e}"
-                    )
+                except (ValueError, OSError, OverflowError):
+                    logger.warning(f"Error converting timestamp for {field}")
                     times[field] = None
             else:
                 # Already a string, validate format or None
@@ -491,7 +477,7 @@ class HTTPClient:
                     next_prayer = prayer
                     break
             except ValueError:
-                logger.warning(f"Invalid time format for {prayer}: {times[prayer]}")
+                logger.warning(f"Invalid time format for {prayer}")
 
         # If we've passed all prayers, current is isha and next is tomorrow's fajr
         if not current_prayer and not next_prayer:
