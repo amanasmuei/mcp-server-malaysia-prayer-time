@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/amanasmuei-mcp-server-malaysia-prayer-time-badge.png)](https://mseep.ai/app/amanasmuei-mcp-server-malaysia-prayer-time)
+
 <div align="center">
   <img src="public/images/banner.svg" alt="Malaysia Prayer Time MCP Server" width="800">
 </div>
